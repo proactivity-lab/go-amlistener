@@ -82,13 +82,17 @@ func main() {
 	sfc := sfconnection.NewSfConnection()
 	sfc.AddDispatcher(dsp)
 
-	logger := log.New(os.Stdout, "INFO:  ", log.Ldate|log.Ltime)
+	logformat := log.Ldate | log.Ltime | log.Lmicroseconds
+	var logger *log.Logger
 	if opts.Debug {
-		sfc.SetDebugLogger(log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime))
+		logger = log.New(os.Stdout, "INFO:  ", logformat)
+		sfc.SetDebugLogger(log.New(os.Stdout, "DEBUG: ", logformat))
 		sfc.SetInfoLogger(logger)
+	} else {
+		logger = log.New(os.Stdout, "", logformat)
 	}
-	sfc.SetWarningLogger(log.New(os.Stdout, "WARN:  ", log.Ldate|log.Ltime))
-	sfc.SetErrorLogger(log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime))
+	sfc.SetWarningLogger(log.New(os.Stdout, "WARN:  ", logformat))
+	sfc.SetErrorLogger(log.New(os.Stdout, "ERROR: ", logformat))
 
 	sfc.Autoconnect(host, port, time.Duration(opts.Reconnect)*time.Second)
 
