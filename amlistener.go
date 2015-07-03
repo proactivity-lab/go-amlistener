@@ -12,7 +12,7 @@ import "regexp"
 import "strconv"
 
 import "github.com/jessevdk/go-flags"
-import "github.com/proactivity-lab/go-sf-connection"
+import "github.com/proactivity-lab/go-sfconnection"
 
 const ApplicationVersionMajor = 0
 const ApplicationVersionMinor = 1
