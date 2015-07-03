@@ -4,4 +4,4 @@ BUILD_DATE = $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 BUILD_DISTRO = $(shell lsb_release -sd)
 
 all:
-	go build -o sflistener -ldflags "-X main.ApplicationBuildDate $(BUILD_DATE) -X main.ApplicationBuildDistro '$(BUILD_DISTRO)'"
+	go build -o amlistener -ldflags "-X main.ApplicationBuildDate $(BUILD_DATE) -X main.ApplicationBuildDistro '$(BUILD_DISTRO)'"
