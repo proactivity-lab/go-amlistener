@@ -39,7 +39,7 @@ func main() {
 		if ApplicationBuildDistro == "" {
 			ApplicationBuildDistro = "unknown"
 		}
-		fmt.Printf("sflistener %d.%d.%d (%s %s)\n", ApplicationVersionMajor, ApplicationVersionMinor, ApplicationVersionPatch, ApplicationBuildDate, ApplicationBuildDistro)
+		fmt.Printf("amlistener %d.%d.%d (%s %s)\n", ApplicationVersionMajor, ApplicationVersionMinor, ApplicationVersionPatch, ApplicationBuildDate, ApplicationBuildDistro)
 		os.Exit(0)
 	}
 

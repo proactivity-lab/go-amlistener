@@ -1,2 +1,2 @@
-# go-sf-listener
-Simple packet listener for SerialForwarder protocol.
+# go-amlistener
+Simple command-line AM listener application.
