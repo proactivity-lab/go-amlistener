@@ -8,15 +8,13 @@ import "os"
 import "os/signal"
 import "log"
 import "time"
-import "regexp"
-import "strconv"
 
 import "github.com/jessevdk/go-flags"
 import "github.com/proactivity-lab/go-sfconnection"
 
 const ApplicationVersionMajor = 0
 const ApplicationVersionMinor = 1
-const ApplicationVersionPatch = 0
+const ApplicationVersionPatch = 1
 
 var ApplicationBuildDate string
 var ApplicationBuildDistro string
@@ -27,8 +25,10 @@ func main() {
 		Positional struct {
 			ConnectionString string `description:"Connectionstring sf@HOST:PORT"`
 		} `positional-args:"yes"`
-		Reconnect   uint   `long:"reconnect" default:"30" description:"Reconnect period, seconds"`
-		Debug       bool   `short:"D" long:"debug" default:"false" description:"Debug mode, print raw packets"`
+
+		Reconnect uint `long:"reconnect" default:"30" description:"Reconnect period, seconds"`
+
+		Debug       []bool `short:"D" long:"debug" description:"Debug mode, print raw packets"`
 		ShowVersion func() `short:"V" long:"version" description:"Show application version"`
 	}
 
@@ -45,46 +45,30 @@ func main() {
 
 	_, err := flags.Parse(&opts)
 	if err != nil {
-		fmt.Printf("Argument parser error: %s", err)
+		fmt.Printf("Argument parser error: %s\n", err)
 		os.Exit(1)
 	}
 
-	host := "localhost"
-	port := 9002
-
-	if opts.Positional.ConnectionString != "" {
-		re := regexp.MustCompile("sf@([a-zA-Z0-9.-]+)(:([0-9]+))?")
-		match := re.FindStringSubmatch(opts.Positional.ConnectionString) // [sf@localhost:9002 localhost :9002 9002]
-		if len(match) == 4 {
-			host = match[1]
-			if len(match[3]) > 0 {
-				p, err := strconv.ParseUint(match[3], 10, 16)
-				if err == nil {
-					port = int(p)
-				} else {
-					fmt.Printf("ERROR: %s cannot be used as a TCP port number!\n", match[2])
-					os.Exit(1)
-				}
-			}
-		} else {
-			fmt.Printf("ERROR: %s cannot be used as a connectionstring!\n", opts.Positional.ConnectionString)
-			os.Exit(1)
-		}
+	host, port, err := sfconnection.ParseSfConnectionString(opts.Positional.ConnectionString)
+	if err != nil {
+		fmt.Printf("ERROR: %s\n", err)
+		os.Exit(1)
 	}
 
-	signals := make(chan os.Signal)
-	signal.Notify(signals, os.Interrupt, os.Kill)
-
-	dsp := sfconnection.NewPacketDispatcher(0, new(sfconnection.Message))
+	dsp := sfconnection.NewMessageDispatcher(new(sfconnection.Message))
 	receive := make(chan sfconnection.Packet)
-	dsp.RegisterSnooper(receive)
+	dsp.RegisterMessageSnooper(receive)
 
 	sfc := sfconnection.NewSfConnection()
 	sfc.AddDispatcher(dsp)
 
+	// Configure logging
 	logformat := log.Ldate | log.Ltime | log.Lmicroseconds
 	var logger *log.Logger
-	if opts.Debug {
+	if len(opts.Debug) > 0 {
+		if len(opts.Debug) > 1 {
+			logformat = logformat | log.Lshortfile
+		}
 		logger = log.New(os.Stdout, "INFO:  ", logformat)
 		sfc.SetDebugLogger(log.New(os.Stdout, "DEBUG: ", logformat))
 		sfc.SetInfoLogger(logger)
@@ -94,7 +78,12 @@ func main() {
 	sfc.SetWarningLogger(log.New(os.Stdout, "WARN:  ", logformat))
 	sfc.SetErrorLogger(log.New(os.Stdout, "ERROR: ", logformat))
 
+	// Connect to the host
 	sfc.Autoconnect(host, port, time.Duration(opts.Reconnect)*time.Second)
+
+	// Set up signals to close nicely on Control+C
+	signals := make(chan os.Signal)
+	signal.Notify(signals, os.Interrupt, os.Kill)
 
 	for interrupted := false; interrupted == false; {
 		select {
