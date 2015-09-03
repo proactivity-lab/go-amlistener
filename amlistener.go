@@ -45,8 +45,14 @@ func main() {
 
 	_, err := flags.Parse(&opts)
 	if err != nil {
-		fmt.Printf("Argument parser error: %s\n", err)
-		os.Exit(1)
+		flagserr := err.(*flags.Error)
+		if flagserr.Type != flags.ErrHelp {
+			if len(opts.Debug) > 0 {
+				fmt.Printf("Argument parser error: %s\n", err)
+			}
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 
 	host, port, err := sfconnection.ParseSfConnectionString(opts.Positional.ConnectionString)
