@@ -14,7 +14,7 @@ import "github.com/proactivity-lab/go-sfconnection"
 
 const ApplicationVersionMajor = 0
 const ApplicationVersionMinor = 1
-const ApplicationVersionPatch = 2
+const ApplicationVersionPatch = 3
 
 var ApplicationBuildDate string
 var ApplicationBuildDistro string
@@ -62,7 +62,7 @@ func main() {
 	}
 
 	dsp := sfconnection.NewMessageDispatcher(sfconnection.NewMessage(0, 0))
-	receive := make(chan *sfconnection.Message)
+	receive := make(chan sfconnection.Packet)
 	dsp.RegisterMessageSnooper(receive)
 
 	sfc := sfconnection.NewSfConnection()
