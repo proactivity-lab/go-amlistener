@@ -10,11 +10,11 @@ import "log"
 import "time"
 
 import "github.com/jessevdk/go-flags"
-import "github.com/proactivity-lab/go-sfconnection"
+import "github.com/proactivity-lab/go-moteconnection"
 
 const ApplicationVersionMajor = 0
-const ApplicationVersionMinor = 1
-const ApplicationVersionPatch = 3
+const ApplicationVersionMinor = 2
+const ApplicationVersionPatch = 0
 
 var ApplicationBuildDate string
 var ApplicationBuildDistro string
@@ -23,7 +23,7 @@ func main() {
 
 	var opts struct {
 		Positional struct {
-			ConnectionString string `description:"Connectionstring sf@HOST:PORT"`
+			ConnectionString string `description:"Connectionstring sf@HOST:PORT or serial@PORT:BAUD"`
 		} `positional-args:"yes"`
 
 		Reconnect uint `long:"reconnect" default:"30" description:"Reconnect period, seconds"`
@@ -55,18 +55,17 @@ func main() {
 		os.Exit(0)
 	}
 
-	host, port, err := sfconnection.ParseSfConnectionString(opts.Positional.ConnectionString)
+	conn, cs, err := moteconnection.CreateConnection(opts.Positional.ConnectionString)
 	if err != nil {
 		fmt.Printf("ERROR: %s\n", err)
 		os.Exit(1)
 	}
 
-	dsp := sfconnection.NewMessageDispatcher(sfconnection.NewMessage(0, 0))
-	receive := make(chan sfconnection.Packet)
+	dsp := moteconnection.NewMessageDispatcher(moteconnection.NewMessage(0, 0))
+	receive := make(chan moteconnection.Packet)
 	dsp.RegisterMessageSnooper(receive)
 
-	sfc := sfconnection.NewSfConnection()
-	sfc.AddDispatcher(dsp)
+	conn.AddDispatcher(dsp)
 
 	// Configure logging
 	logformat := log.Ldate | log.Ltime | log.Lmicroseconds
@@ -76,16 +75,17 @@ func main() {
 			logformat = logformat | log.Lshortfile
 		}
 		logger = log.New(os.Stdout, "INFO:  ", logformat)
-		sfc.SetDebugLogger(log.New(os.Stdout, "DEBUG: ", logformat))
-		sfc.SetInfoLogger(logger)
+		conn.SetDebugLogger(log.New(os.Stdout, "DEBUG: ", logformat))
+		conn.SetInfoLogger(logger)
 	} else {
 		logger = log.New(os.Stdout, "", logformat)
 	}
-	sfc.SetWarningLogger(log.New(os.Stdout, "WARN:  ", logformat))
-	sfc.SetErrorLogger(log.New(os.Stdout, "ERROR: ", logformat))
+	conn.SetWarningLogger(log.New(os.Stdout, "WARN:  ", logformat))
+	conn.SetErrorLogger(log.New(os.Stdout, "ERROR: ", logformat))
 
 	// Connect to the host
-	sfc.Autoconnect(host, port, time.Duration(opts.Reconnect)*time.Second)
+	logger.Printf("Connecting to %s\n", cs)
+	conn.Autoconnect(time.Duration(opts.Reconnect) * time.Second)
 
 	// Set up signals to close nicely on Control+C
 	signals := make(chan os.Signal)
@@ -98,7 +98,7 @@ func main() {
 		case sig := <-signals:
 			signal.Stop(signals)
 			logger.Printf("signal %s\n", sig)
-			sfc.Disconnect()
+			conn.Disconnect()
 			interrupted = true
 		}
 	}
